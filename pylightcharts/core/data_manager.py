@@ -61,15 +61,30 @@ class DataManager(QObject):
         return dt.astimezone(datetime.timezone.utc)
 
     def _parse_ib_bar(self, bar) -> dict:
-        """Translates an ib_async BarData or plain dictionary into our internal format."""
-        return {
-            "time": self._ensure_utc_aware(getattr(bar, 'date', bar.get('date', bar.get('time')))),
-            "open": getattr(bar, 'open', bar.get('open')),
-            "high": getattr(bar, 'high', bar.get('high')),
-            "low": getattr(bar, 'low', bar.get('low')),
-            "close": getattr(bar, 'close', bar.get('close')),
-            "volume": getattr(bar, 'volume', bar.get('volume', 0.0))
-        }
+        """Translates an ib_async BarData, RealTimeBar, or plain dictionary into our internal format."""
+        if isinstance(bar, dict):
+            # It's a dictionary (e.g., from your mock data generator)
+            raw_time = bar.get('date', bar.get('time'))
+            return {
+                "time": self._ensure_utc_aware(raw_time),
+                "open": bar.get('open'),
+                "high": bar.get('high'),
+                "low": bar.get('low'),
+                "close": bar.get('close'),
+                "volume": bar.get('volume', 0.0)
+            }
+        else:
+            # It's an ib_async object
+            # Note: ib_async uses 'date' for historical bars and 'time' for live ticks
+            raw_time = getattr(bar, 'date', getattr(bar, 'time', None))
+            return {
+                "time": self._ensure_utc_aware(raw_time),
+                "open": getattr(bar, 'open'),
+                "high": getattr(bar, 'high'),
+                "low": getattr(bar, 'low'),
+                "close": getattr(bar, 'close'),
+                "volume": getattr(bar, 'volume', 0.0)
+            }
 
     def _calculate_precision(self, price: float) -> int:
         """Determines the number of decimal places in a float."""
