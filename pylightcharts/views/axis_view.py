@@ -1,3 +1,5 @@
+import math
+
 from PySide6.QtGui import QPainter, QPen, QColor, QFont
 from PySide6.QtCore import Qt
 
@@ -38,19 +40,33 @@ class AxisView(BaseView):
         
         # --- 2. Draw Y-Axis Text (Prices) ---
         painter.setPen(self.text_color)
-        grid_lines = 5
         display_min = v_mid - (v_range / 2.0)
-       
-        # Grab the precision from the DataManager
+        display_max = v_mid + (v_range / 2.0)
+
+        # Choose the number of ticks based on chart height so labels don't overlap
+        desired_tick_px = 50
+        max_ticks = max(2, min(10, int(chart_height / desired_tick_px)))
+
+        step = CoordinateEngine.calculate_nice_step(v_range, max_ticks)
+
+        # Align the first tick to a "nice" rounded value
+        first_tick = math.floor(display_min / step) * step
+        last_tick = math.ceil(display_max / step) * step
+        num_ticks = int(round((last_tick - first_tick) / step)) + 1
+
+        # Use price precision to format labels and avoid floating point artifacts
         prec = data_manager.price_precision
-        
-        for i in range(grid_lines + 1):
-            p = display_min + (v_range / grid_lines) * i
-            y = CoordinateEngine.price_to_y(p, v_mid, v_range, chart_height)
-            
-            if 0 <= y <= chart_height:
-                painter.drawText(chart_width + 5, int(y) + 4, f"{p:.{prec}f}")
-                
+        text_rect_width = max(0, viewport.margin_right - 10)
+
+        for i in range(num_ticks):
+            price = first_tick + (i * step)
+            price = round(price, prec)
+            y_pixel = CoordinateEngine.price_to_y(price, v_mid, v_range, chart_height)
+
+            if 0 <= y_pixel <= chart_height:
+                label_rect = (chart_width + 5, int(y_pixel) - 8, text_rect_width, 16)
+                painter.drawText(*label_rect, Qt.AlignRight | Qt.AlignVCenter, f"{price:.{prec}f}")
+
         # --- 3. Draw X-Axis Text (Times) ---
         data_list = data_manager.get_data_list()
         data_length = len(data_list)

@@ -1,3 +1,5 @@
+import math
+
 from PySide6.QtGui import QPainter, QPen, QColor
 from PySide6.QtCore import Qt
 
@@ -20,16 +22,26 @@ class GridView(BaseView):
         v_range = viewport.view_price_range
         
         # --- 1. Draw Horizontal Grids (Price Levels) ---
-        grid_lines = 5
         display_min = v_mid - (v_range / 2.0)
+        display_max = v_mid + (v_range / 2.0)
         
-        for i in range(grid_lines + 1):
-            p = display_min + (v_range / grid_lines) * i
-            y = CoordinateEngine.price_to_y(p, v_mid, v_range, chart_height)
+        # Choose the number of ticks based on chart height so grid lines don't overlap
+        desired_tick_px = 50
+        max_ticks = max(2, min(10, int(chart_height / desired_tick_px)))
+
+        # Get the clean step interval
+        step = CoordinateEngine.calculate_nice_step(v_range, max_ticks)
+
+        # Find the first 'nice' number above the bottom of the screen
+        current_y = math.ceil(display_min / step) * step
+        
+        while current_y <= display_max:
+            y_pixel = CoordinateEngine.price_to_y(current_y, v_mid, v_range, chart_height)
             
-            # Only draw if it's within the chart boundaries
-            if 0 <= y <= chart_height:
-                painter.drawLine(0, int(y), chart_width, int(y))
+            if 0 <= y_pixel <= chart_height:
+                painter.drawLine(0, int(y_pixel), chart_width, int(y_pixel))
+            
+            current_y += step # Move up to the next grid line
                 
         # --- 2. Draw Vertical Grids (Time Intervals) ---
         data_list = data_manager.get_data_list()

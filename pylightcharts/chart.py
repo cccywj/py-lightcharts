@@ -92,7 +92,6 @@ class _ChartCanvas(QWidget):
             self.viewport.zoom_y(dy)
             self.last_mouse_pos = pos
         else:
-            # If not dragging, we are just hovering! Tell the viewport!
             self.viewport.update_crosshair(pos.x(), pos.y())
             
         self.update()
@@ -101,7 +100,6 @@ class _ChartCanvas(QWidget):
         self.drag_mode = None
 
     def leaveEvent(self, event):
-        # Hide crosshair when mouse leaves widget
         self.viewport.hide_crosshair()
 
     def paintEvent(self, event):
@@ -111,31 +109,19 @@ class _ChartCanvas(QWidget):
         w, h = self.width(), self.height()
         painter.fillRect(0, 0, w, h, QColor(self.bg_color))
 
-        # Calculate the actual inner chart dimensions based on margins
         chart_w = w - self.viewport.margin_right
         chart_h = h - self.viewport.margin_bottom
         
-        # 2. Execute the Render Pipeline (Layering)
         self.grid_view.draw(painter, self.viewport, self.data_manager, chart_w, chart_h)
-        
-        # Draw volume BEFORE candles so it sits behind the price action
         self.volume_view.draw(painter, self.viewport, self.data_manager, chart_w, chart_h) 
-        
         self.candle_view.draw(painter, self.viewport, self.data_manager, chart_w, chart_h)
         
-        # --- Indicator Render Pipeline ---
         self.sma_view.draw(painter, self.viewport, self.data_manager, chart_w, chart_h)
         self.vwap_view.draw(painter, self.viewport, self.data_manager, chart_w, chart_h)
         
-        # 3. Axes and Borders
         self.axis_view.draw(painter, self.viewport, self.data_manager, chart_w, chart_h)
-
         self.live_price_view.draw(painter, self.viewport, self.data_manager, chart_w, chart_h)
-        
-        # 4. Crosshair and Floating Labels
         self.crosshair_view.draw(painter, self.viewport, self.data_manager, chart_w, chart_h)
-        
-        # 5. Top-Left OHLC Legend
         self.tooltip_view.draw(painter, self.viewport, self.data_manager, chart_w, chart_h)
 
 
@@ -145,7 +131,6 @@ class _ChartCanvas(QWidget):
 class PyLightChartWidget(QWidget):
     
     # --- Hooks for the Main App ---
-    # Emits (symbol, timeframe_in_seconds) when the chart needs new historical data
     historical_data_requested = Signal(str, int) 
     indicator_requested = Signal(str) 
 
@@ -154,7 +139,7 @@ class PyLightChartWidget(QWidget):
         
         self.data_manager = DataManager()
         self.viewport = Viewport()
-        self.current_symbol = "AAPL" # Default starting symbol
+        self.current_symbol = "AAPL" 
         
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
@@ -174,7 +159,6 @@ class PyLightChartWidget(QWidget):
 
     def _handle_tf_changed(self, tf_seconds):
         self.data_manager.set_timeframe(tf_seconds)
-        # When timeframe changes, we need to request historical data for the current symbol again!
         self.enable_buffering()
         self.historical_data_requested.emit(self.current_symbol, tf_seconds)
 
@@ -182,22 +166,19 @@ class PyLightChartWidget(QWidget):
     # PUBLIC API
     # ==========================================
     def change_symbol(self, symbol: str):
-        """Public method to initiate a symbol change."""
         self.current_symbol = symbol
         self.enable_buffering()
         self.historical_data_requested.emit(symbol, self.data_manager.timeframe)
 
     def enable_buffering(self):
-        """Tells the chart to start queueing live data while waiting for historical."""
         self.data_manager.enable_buffering()
 
     def apply_historical_data(self, ib_bars: list):
-        """Pass ib_async.BarData directly in here."""
         self.data_manager.apply_historical_data(ib_bars)
 
-    def update_live_bar(self, ib_bar):
-        """Pass ib_async.RealTimeBar or updated BarData directly in here."""
-        self.data_manager.update_live_bar(ib_bar)
+    def update_tick(self, ib_ticker):
+        """Pass an ib_async.Ticker or raw dict directly in here."""
+        self.data_manager.update_tick(ib_ticker)
 
     def set_timeframe(self, seconds):
         self.toolbar.set_timeframe(seconds)

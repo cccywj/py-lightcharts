@@ -12,9 +12,9 @@ class Viewport(QObject):
         super().__init__()
         
         # --- Layout Margins ---
-        self.margin_right = 65    # Space for the Y-Axis price labels
-        self.margin_bottom = 30   # Space for the X-Axis time labels
-        self.right_blank_space = 100.0  # Padding on the right side of the candles
+        self.margin_right = 85    # <-- INCREASE THIS to 85 or 90
+        self.margin_bottom = 30   
+        self.right_blank_space = 100.0
         
         # --- X-Axis (Time) State ---
         self.default_candle_width = 8.0

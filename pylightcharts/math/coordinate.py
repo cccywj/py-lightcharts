@@ -1,3 +1,5 @@
+import math
+
 class CoordinateEngine:
     """
     A pure mathematical translation layer. 
@@ -94,3 +96,26 @@ class CoordinateEngine:
         rect_height = max(abs(open_y - close_y), 1.0) # Guarantee at least 1px height
         
         return rect_x, rect_y, candle_width, rect_height
+    
+    @staticmethod
+    def calculate_nice_step(price_range: float, max_ticks: int = 5) -> float:
+        """Calculates 'clean' human-readable grid intervals (0.1, 0.5, 1, 10, etc.)"""
+        if price_range <= 0: return 1.0
+        
+        rough_step = price_range / max_ticks
+        
+        # Find the power of 10 magnitude (e.g., 100, 10, 1, 0.1, 0.01)
+        magnitude = math.pow(10, math.floor(math.log10(rough_step)))
+        normalized_step = rough_step / magnitude
+        
+        # Snap the normalized step to a 'nice' multiplier
+        if normalized_step < 1.5:
+            nice_multiplier = 1.0
+        elif normalized_step < 3.0:
+            nice_multiplier = 2.0
+        elif normalized_step < 7.0:
+            nice_multiplier = 5.0
+        else:
+            nice_multiplier = 10.0
+            
+        return nice_multiplier * magnitude
