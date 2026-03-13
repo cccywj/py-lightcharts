@@ -43,4 +43,4 @@ class LivePriceView(BaseView):
             prec = data_manager.price_precision
             painter.setPen(QPen(self.text_color))
             painter.setFont(self.font)
-            painter.drawText(chart_width + 5, int(y) + 4, f"{last_price:.2f}")
+            painter.drawText(chart_width + 5, int(y) + 4, f"{last_price:.{prec}f}")

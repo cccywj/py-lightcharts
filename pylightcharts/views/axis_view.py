@@ -40,7 +40,8 @@ class AxisView(BaseView):
         painter.setPen(self.text_color)
         grid_lines = 5
         display_min = v_mid - (v_range / 2.0)
-
+       
+        # Grab the precision from the DataManager
         prec = data_manager.price_precision
         
         for i in range(grid_lines + 1):
@@ -48,7 +49,7 @@ class AxisView(BaseView):
             y = CoordinateEngine.price_to_y(p, v_mid, v_range, chart_height)
             
             if 0 <= y <= chart_height:
-                painter.drawText(chart_width + 5, int(y) + 4, f"{p:.2f}")
+                painter.drawText(chart_width + 5, int(y) + 4, f"{p:.{prec}f}")
                 
         # --- 3. Draw X-Axis Text (Times) ---
         data_list = data_manager.get_data_list()

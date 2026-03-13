@@ -37,7 +37,7 @@ class TooltipView(BaseView):
         d = data_list[target_idx]
         color = self.bull_color if d['close'] >= d['open'] else self.bear_color
         prec = data_manager.price_precision
-        info_text = f"O: {d['open']:.2f}  H: {d['high']:.2f}  L: {d['low']:.2f}  C: {d['close']:.2f}"
+        info_text = f"O: {d['open']:.{prec}f}  H: {d['high']:.{prec}f}  L: {d['low']:.{prec}f}  C: {d['close']:.{prec}f}"
 
         # Draw the text box
         painter.setFont(self.font)

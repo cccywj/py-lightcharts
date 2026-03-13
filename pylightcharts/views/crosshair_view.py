@@ -62,7 +62,7 @@ class CrosshairView(BaseView):
         painter.fillRect(chart_width, int(viewport.crosshair_y) - 10, label_width, 20, self.label_bg_color)
         prec = data_manager.price_precision
         painter.setPen(QPen(self.text_color))
-        painter.drawText(chart_width + 5, int(viewport.crosshair_y) + 4, f"{hover_price:.2f}")
+        painter.drawText(chart_width + 5, int(viewport.crosshair_y) + 4, f"{hover_price:.{prec}f}")
 
         # --- Draw X-Axis Time Label ---
         time_fmt = self._get_time_format(data_manager.timeframe)

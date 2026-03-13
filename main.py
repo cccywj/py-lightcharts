@@ -23,8 +23,8 @@ def generate_mock_data(num_candles=200, tf_seconds=60):
         low_p = min(open_p, close_p) - random.uniform(0, volatility/2)
         data.append({
             "time": base_time + datetime.timedelta(seconds=i * tf_seconds),
-            "open": round(open_p, 2), "high": round(high_p, 2),
-            "low": round(low_p, 2), "close": round(close_p, 2),
+            "open": round(open_p, 5), "high": round(high_p, 5),
+            "low": round(low_p, 5), "close": round(close_p, 5),
             "volume": random.randint(100, 1000)
         })
         price = close_p
