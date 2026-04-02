@@ -163,12 +163,12 @@ class TradingApp(QMainWindow):
         self.current_price = random.uniform(10.0, 500.0)
         print(f"[Main App] Starting from ${self.current_price:.2f}")
         print(
-            f"[Main App] Waiting 2 seconds for historical data..."
+            f"[Main App] Waiting 0.5 seconds for historical data..."
             f" (Live ticks are buffering!)"
         )
 
-        # Simulate a 2-second network delay from IBKR (realistic for reqHistoricalData)
-        QTimer.singleShot(2000, lambda: self._simulate_ibkr_response(timeframe))
+        # Simulate a 500-millisecond network delay from IBKR (realistic for reqHistoricalData)
+        QTimer.singleShot(500, lambda: self._simulate_ibkr_response(timeframe))
 
     def _simulate_ibkr_response(self, timeframe: int) -> None:
         """Simulate receiving historical data after a network delay."""

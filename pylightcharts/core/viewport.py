@@ -81,6 +81,8 @@ class Viewport(QObject):
         self.crosshair_y = -1.0            # Y-pixel position of crosshair
         self.crosshair_visible = False     # Whether crosshair is currently drawn
 
+        self.last_data_length = 0
+
         self.scroll_index_offset = self._default_scroll_index_offset()
 
     def _default_scroll_index_offset(self) -> float:
@@ -307,6 +309,26 @@ class Viewport(QObject):
         """
         self.auto_scale = state
         self.viewport_changed.emit()
+
+    def track_live_edge(self, current_data_length: int):
+        """
+        Mathematically freezes the historical view when new candles arrive.
+        Called every frame before calculating coordinate projections.
+        """
+        # If a new candle was added to the array
+        if self.last_data_length > 0 and current_data_length > self.last_data_length:
+            candles_added = current_data_length - self.last_data_length
+            
+            # If the user has panned away from the live edge (offset > 0), 
+            # we push the offset back by the exact number of new candles.
+            if self.scroll_index_offset > 0:
+                self.scroll_index_offset += candles_added
+                
+        # If the timeframe changed or data was cleared, reset the offset
+        elif current_data_length < self.last_data_length:
+            self.scroll_index_offset = self._default_scroll_index_offset()
+            
+        self.last_data_length = current_data_length
 
     # ==========================================
     # CROSSHAIR MANAGEMENT

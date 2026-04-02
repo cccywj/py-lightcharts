@@ -47,7 +47,7 @@ class AxisView(BaseView):
         # --- STEP 1: Draw Frame Borders (dividing chart from margins) ---
         painter.setPen(QPen(self.axis_line_color, 1, Qt.SolidLine))
         # Vertical divider line
-        painter.drawLine(chart_width, 0, chart_width, chart_height)
+        # painter.drawLine(chart_width, 0, chart_width, chart_height)
         # Horizontal divider line (draws all the way across the widget including the margin)
         painter.drawLine(0, chart_height, chart_width + viewport.margin_right, chart_height)
         

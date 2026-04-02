@@ -107,16 +107,24 @@ class _ChartCanvas(QWidget):
             self.last_mouse_pos = pos
 
     def mouseDoubleClickEvent(self, event) -> None:
-        """Handle double-click to reset auto-scale.
+        """Handle double-click to reset.
         
+        Double-clicking on the chart area snaps to the live edge.
         Double-clicking on the Y-axis enables auto-scaling to fit visible data.
         
         Args:
             event: Qt mouse event.
         """
-        # Reset auto-scale on double click in Y-Axis
-        if event.position().toPoint().x() > (self.width() - self.viewport.margin_right):
+        # Reset auto-scale on double click in Y-Axis, and return to home anywhere else
+        pos = event.position().toPoint()
+        chart_w = self.width() - self.viewport.margin_right
+        
+        if pos.x() > chart_w:
+            # Double click the Y-Axis margin -> Reset Price Auto-Scale
             self.viewport.set_auto_scale(True)
+        else:
+            # Double click the Chart area -> Snap to the live edge!
+            self.viewport.reset_to_home()
 
     def mouseMoveEvent(self, event) -> None:
         """Handle mouse movement for dragging and crosshair updates.
@@ -180,6 +188,9 @@ class _ChartCanvas(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)  # Smooth edges
 
+        data_length = len(self.data_manager.get_data_list())
+        self.viewport.track_live_edge(data_length)
+
         w, h = self.width(), self.height()
         # Fill background
         painter.fillRect(0, 0, w, h, QColor(self.bg_color))
@@ -187,10 +198,14 @@ class _ChartCanvas(QWidget):
         chart_w = w - self.viewport.margin_right
         chart_h = h - self.viewport.margin_bottom
 
+        painter.setClipRect(0, 0, chart_w, chart_h)
+
         # Draw layers from back to front
         self.grid_view.draw(painter, self.viewport, self.data_manager, chart_w, chart_h)
         self.volume_view.draw(painter, self.viewport, self.data_manager, chart_w, chart_h)
         self.candle_view.draw(painter, self.viewport, self.data_manager, chart_w, chart_h)
+
+        painter.setClipping(False)
 
         self.axis_view.draw(painter, self.viewport, self.data_manager, chart_w, chart_h)
         self.live_price_view.draw(painter, self.viewport, self.data_manager, chart_w, chart_h)
@@ -255,6 +270,7 @@ class PyLightChartWidget(QWidget):
         # Connect signals for repainting
         self.data_manager.data_changed.connect(self.canvas.update)
         self.viewport.viewport_changed.connect(self.canvas.update)
+        
 
         # Connect toolbar signals
         self.toolbar.timeframe_changed.connect(self._handle_tf_changed)
@@ -268,6 +284,7 @@ class PyLightChartWidget(QWidget):
         self.data_manager.set_timeframe(tf_seconds)
         self.enable_buffering()
         self.historical_data_requested.emit(self.current_symbol, tf_seconds)
+        self.viewport.reset_to_home()
 
     # ==========================================
     # PUBLIC API
