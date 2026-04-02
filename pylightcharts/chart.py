@@ -16,7 +16,6 @@ from pylightcharts.views.grid_view import GridView
 from pylightcharts.views.axis_view import AxisView
 from pylightcharts.views.crosshair_view import CrosshairView
 from pylightcharts.views.tooltip_view import TooltipView
-from pylightcharts.views.indicator_view import IndicatorLineView
 from pylightcharts.views.volume_view import VolumeView
 from pylightcharts.views.live_price_view import LivePriceView
 
@@ -50,10 +49,6 @@ class _ChartCanvas(QWidget):
         self.grid_view = GridView()
         self.volume_view = VolumeView()
         self.candle_view = CandleView()
-
-        # Indicator layers
-        self.sma_view = IndicatorLineView("SMA", "#2962FF")   # Blue SMA line
-        self.vwap_view = IndicatorLineView("VWAP", "#E0D714") # Yellow VWAP line
 
         # Overlay layers
         self.axis_view = AxisView()
@@ -105,6 +100,8 @@ class _ChartCanvas(QWidget):
                 self.drag_mode = "y_axis"
             elif px < chart_w and py > chart_h:
                 self.drag_mode = "x_axis"
+            elif px > chart_w and py > chart_h:
+                self.drag_mode = None  # Do nothing in the empty corner intersection
             else:
                 self.drag_mode = "chart"
             self.last_mouse_pos = pos
@@ -195,9 +192,6 @@ class _ChartCanvas(QWidget):
         self.volume_view.draw(painter, self.viewport, self.data_manager, chart_w, chart_h)
         self.candle_view.draw(painter, self.viewport, self.data_manager, chart_w, chart_h)
 
-        self.sma_view.draw(painter, self.viewport, self.data_manager, chart_w, chart_h)
-        self.vwap_view.draw(painter, self.viewport, self.data_manager, chart_w, chart_h)
-
         self.axis_view.draw(painter, self.viewport, self.data_manager, chart_w, chart_h)
         self.live_price_view.draw(painter, self.viewport, self.data_manager, chart_w, chart_h)
         self.crosshair_view.draw(painter, self.viewport, self.data_manager, chart_w, chart_h)
@@ -231,7 +225,6 @@ class PyLightChartWidget(QWidget):
 
     # Signals for parent application communication
     historical_data_requested = Signal(str, int)  # (symbol, timeframe_s)
-    indicator_requested = Signal(str)  # (indicator_code)
 
     def __init__(self, parent=None) -> None:
         """Initialize the chart widget.
@@ -265,7 +258,6 @@ class PyLightChartWidget(QWidget):
 
         # Connect toolbar signals
         self.toolbar.timeframe_changed.connect(self._handle_tf_changed)
-        self.toolbar.indicator_requested.connect(self.toggle_indicator)
 
     def _handle_tf_changed(self, tf_seconds: int) -> None:
         """Handle timeframe selection change from the toolbar.
@@ -332,19 +324,7 @@ class PyLightChartWidget(QWidget):
         """
         self.toolbar.set_timeframe(seconds)
 
-    def toggle_indicator(self, ind_code: str) -> None:
-        """Toggle an indicator on/off.
-        
-        Args:
-            ind_code: Indicator code ('VOL', 'SMA', 'VWAP', etc.).
-        """
-        if ind_code == "VOL":
-            self.canvas.volume_view.visible = not self.canvas.volume_view.visible
-            self.canvas.update()
-            return
-
-        if ind_code in self.data_manager.active_indicators:
-            self.data_manager.remove_indicator(ind_code)
-        else:
-            params = {"period": 14} if ind_code == "SMA" else {}
-            self.data_manager.add_indicator(ind_code, params)
+    def toggle_volume(self) -> None:
+        """Toggle the volume bars overlay on/off."""
+        self.canvas.volume_view.visible = not self.canvas.volume_view.visible
+        self.canvas.update()

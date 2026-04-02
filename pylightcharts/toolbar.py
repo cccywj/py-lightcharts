@@ -16,7 +16,6 @@ class ChartToolbar(QWidget):
 
     # Signals for user interactions
     timeframe_changed = Signal(int)  # Emitted with timeframe in seconds
-    indicator_requested = Signal(str)  # Emitted with indicator code
 
     def __init__(self, parent=None) -> None:
         """Initialize the toolbar with timeframe and indicator controls.
@@ -72,13 +71,6 @@ class ChartToolbar(QWidget):
 
         self._build_timeframes()
 
-        # Separator between timeframes and indicators
-        divider = QLabel("  |  ")
-        divider.setStyleSheet("color: #2A2E39; font-size: 14px;")
-        self.layout.addWidget(divider)
-
-        self._build_indicators()
-
     def _build_timeframes(self) -> None:
         """Create and configure the timeframe selector combo box."""
         self.tf_combo = QComboBox()
@@ -103,21 +95,6 @@ class ChartToolbar(QWidget):
         self.tf_combo.currentIndexChanged.connect(self._on_tf_changed)
         self.layout.addWidget(self.tf_combo)
 
-    def _build_indicators(self) -> None:
-        """Create and configure the indicator selector combo box."""
-        self.ind_combo = QComboBox()
-        self.ind_combo.setCursor(Qt.PointingHandCursor)
-        self.ind_combo.setStyleSheet(self.combo_style)
-
-        # Add indicator options
-        self.ind_combo.addItem("ƒx Indicators", "")
-        self.ind_combo.addItem("Simple Moving Average", "SMA")
-        self.ind_combo.addItem("Volume", "VOL")
-        self.ind_combo.addItem("VWAP", "VWAP")
-
-        self.ind_combo.currentIndexChanged.connect(self._on_ind_changed)
-        self.layout.addWidget(self.ind_combo)
-
     def _on_tf_changed(self, index: int) -> None:
         """Handle timeframe selection change.
         
@@ -125,18 +102,6 @@ class ChartToolbar(QWidget):
             index: Index in the combo box.
         """
         self.timeframe_changed.emit(self.tf_combo.itemData(index))
-
-    def _on_ind_changed(self, index: int) -> None:
-        """Handle indicator selection change.
-        
-        Args:
-            index: Index in the combo box.
-        """
-        code = self.ind_combo.itemData(index)
-        if code:
-            self.indicator_requested.emit(code)
-            # Reset combo to the placeholder item
-            self.ind_combo.setCurrentIndex(0)
 
     def set_timeframe(self, seconds: int) -> None:
         """Programmatically set the timeframe.

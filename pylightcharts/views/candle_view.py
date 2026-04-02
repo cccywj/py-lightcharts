@@ -74,16 +74,13 @@ class CandleView(BaseView):
 
             # --- Coordinate Transformation ---
             # X from bar time so candles align with time-based grid lines
-            x_center = CoordinateEngine.time_to_x(
-                d["time"],
-                data_list,
-                tf_sec,
-                data_length,
-                scroll,
-                t_space,
-                r_blank,
-                chart_width,
-            )
+            x_center = CoordinateEngine.index_to_x(
+                i, 
+                data_length, 
+                scroll, 
+                t_space, 
+                r_blank, 
+                chart_width)
 
             # Stop drawing if we've scrolled off the left edge
             if x_center + (c_width / 2.0) < 0:

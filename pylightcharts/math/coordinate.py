@@ -438,7 +438,7 @@ class CoordinateEngine:
             >>> CoordinateEngine.calculate_nice_step(0.0025, 5)
             0.0005  # Very small ranges (penny stocks, crypto)
         """
-        if price_range <= 0:
+        if price_range <= 0 or (price_range / max_ticks) <= 1e-12:
             return 1.0
         
         rough_step = price_range / max_ticks

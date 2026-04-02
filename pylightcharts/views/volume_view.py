@@ -80,16 +80,13 @@ class VolumeView(BaseView):
             # Scale volume proportionally to the maximum
             h_px = (vol / max_vol) * max_height_px
 
-            x_center = CoordinateEngine.time_to_x(
-                d["time"],
-                data_list,
-                tf_sec,
-                data_length,
-                scroll,
-                t_space,
-                r_blank,
-                chart_width,
-            )
+            x_center = CoordinateEngine.index_to_x(
+                i, 
+                data_length, 
+                scroll, 
+                t_space, 
+                r_blank, 
+                chart_width)
             if x_center + (viewport.candle_width / 2.0) < 0:
                 break  # Stop drawing when off the left edge
 

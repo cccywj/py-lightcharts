@@ -10,9 +10,9 @@ Handles:
 """
 
 import datetime
+import math
 from typing import List, Dict, Any, Optional, Union
 from PySide6.QtCore import QObject, Signal
-from .indicators import IndicatorMath
 
 class DataManager(QObject):
     """
@@ -57,10 +57,6 @@ class DataManager(QObject):
         self._max_capacity = max_capacity
         self.price_precision = 2  # will auto-adjust based on price scale
 
-        # Indicator system
-        self.active_indicators: Dict[str, Dict[str, Any]] = {}
-        self.indicator_data: Dict[str, List[Optional[float]]] = {}
-
         # Gapless buffering system
         self._is_buffering = False
         self._live_buffer: List[Dict[str, Any]] = []
@@ -97,7 +93,6 @@ class DataManager(QObject):
         - User explicitly resets
         """
         self._data_list.clear()
-        self.indicator_data.clear()
         self._live_buffer.clear()
         self._is_buffering = False
         self.data_changed.emit()
@@ -183,6 +178,8 @@ class DataManager(QObject):
         """
         if isinstance(bar, dict):
             raw_time = bar.get('date', bar.get('time'))
+            if raw_time is None:
+                raise ValueError("Historical bar data is missing a 'time' or 'date' key.")
             t = self._floor_time_to_timeframe(self._ensure_utc_aware(raw_time))
             return {
                 "time": t,
@@ -195,6 +192,8 @@ class DataManager(QObject):
         else:
             # ib_async.BarData object: use getattr with fallbacks
             raw_time = getattr(bar, 'date', getattr(bar, 'time', None))
+            if raw_time is None:
+                raise ValueError("Historical bar data is missing a 'time' or 'date' key.")
             t = self._floor_time_to_timeframe(self._ensure_utc_aware(raw_time))
             return {
                 "time": t,
@@ -250,7 +249,7 @@ class DataManager(QObject):
             ask = getattr(tick, 'ask', None)
             
             # Validate bid/ask: not None, not NaN, and > 0
-            if bid is not None and ask is not None and bid == bid and ask == ask and bid > 0 and ask > 0:
+            if bid is not None and ask is not None and not math.isnan(bid) and not math.isnan(ask) and bid > 0 and ask > 0:
                 price = (bid + ask) / 2.0
             else:
                 # Fallback to last trade price
@@ -388,7 +387,6 @@ class DataManager(QObject):
             self.price_precision = self._calculate_precision(self._data_list[-1]['close'])
 
         self._is_buffering = False
-        self._recalculate_indicators()
         self.data_changed.emit()
 
     def update_tick(self, tick: Union[Dict[str, Any], Any]) -> None:
@@ -452,7 +450,6 @@ class DataManager(QObject):
                 current_candle['low'] = min(current_candle['low'], parsed_tick['low'])
                 current_candle['volume'] += parsed_tick['volume']
 
-        self._recalculate_indicators()
         self.data_changed.emit()
 
     def get_visible_data(self, left_index: int, right_index: int) -> List[Dict[str, Any]]:
@@ -482,69 +479,3 @@ class DataManager(QObject):
         if left_index > right_index or not self._data_list:
             return []
         return self._data_list[left_index : right_index + 1]
-
-    def _recalculate_indicators(self) -> None:
-        """
-        Recalculate all active indicators based on current data.
-        
-        Called whenever data changes. Iterates through active_indicators dict
-        and calls the appropriate math function for each.
-        
-        Supported indicators:
-        - SMA: Simple Moving Average with configurable period
-        - VWAP: Volume Weighted Average Price
-        
-        Note:
-            - Only recalculates enabled indicators
-            - Results stored in indicator_data dict
-            - Handles empty data gracefully
-        """
-        if not self._data_list:
-            return
-        if "SMA" in self.active_indicators:
-            self.indicator_data["SMA"] = IndicatorMath.calculate_sma(
-                self._data_list, 
-                self.active_indicators["SMA"].get("period", 14)
-            )
-        if "VWAP" in self.active_indicators:
-            self.indicator_data["VWAP"] = IndicatorMath.calculate_vwap(self._data_list)
-
-    def add_indicator(self, name: str, params: Optional[Dict[str, Any]] = None) -> None:
-        """
-        Enable a technical indicator.
-        
-        Adds an indicator to active_indicators, recalculates its values,
-        and emits data_changed signal to update the UI.
-        
-        Args:
-            name: Indicator name (e.g., "SMA", "VWAP")
-            params: Dict of configuration parameters:
-                   - SMA: {"period": 14} (default 14)
-                   - VWAP: {} (no parameters)
-        
-        Examples:
-            >>> dm.add_indicator("SMA", {"period": 20})
-            >>> dm.add_indicator("VWAP")
-        """
-        self.active_indicators[name] = params or {}
-        self._recalculate_indicators()
-        self.data_changed.emit()
-
-    def remove_indicator(self, name: str) -> None:
-        """
-        Disable a technical indicator.
-        
-        Removes the indicator from active_indicators and its calculated values,
-        then signals the UI to update.
-        
-        Args:
-            name: Indicator name to remove (e.g., "SMA", "VWAP")
-        
-        Examples:
-            >>> dm.remove_indicator("SMA")
-        """
-        if name in self.active_indicators:
-            del self.active_indicators[name]
-            if name in self.indicator_data:
-                del self.indicator_data[name]
-            self.data_changed.emit()

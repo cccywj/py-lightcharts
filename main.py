@@ -171,21 +171,27 @@ class TradingApp(QMainWindow):
         QTimer.singleShot(2000, lambda: self._simulate_ibkr_response(timeframe))
 
     def _simulate_ibkr_response(self, timeframe: int) -> None:
-        """Simulate receiving historical data after a network delay.
-        
-        Generates mock data and applies it to the chart. The chart
-        automatically merges the buffered live ticks with this history.
-        
-        Args:
-            timeframe: Timeframe in seconds for the historical data.
-        """
+        """Simulate receiving historical data after a network delay."""
         print("[Main App] Historical data arrived! Pushing to chart.")
+        
         history = generate_mock_data(
             300, timeframe, base_price=self.current_price, seed=self._seed
         )
-        self.current_price = history[-1]["close"]
 
-        # Hand it to the chart. It will auto-merge with the 2 seconds of buffered ticks.
+        # FIX: The random walk drifted over 300 bars. 
+        # Calculate how far it drifted, and shift the entire history backwards
+        # so the final historical candle perfectly aligns with our live ticks.
+        drift = history[-1]["close"] - self.current_price
+        
+        for bar in history:
+            bar["open"] = round(bar["open"] - drift, 2)
+            bar["high"] = round(bar["high"] - drift, 2)
+            bar["low"] = round(bar["low"] - drift, 2)
+            bar["close"] = round(bar["close"] - drift, 2)
+
+        # (Remove the old line: self.current_price = history[-1]["close"])
+
+        # Hand it to the chart. It will now auto-merge seamlessly!
         self.chart.apply_historical_data(history)
 
     def on_live_tick(self) -> None:
@@ -195,8 +201,15 @@ class TradingApp(QMainWindow):
         If called before historical data is loaded, the chart buffers the ticks.
         """
         # Calculate volatility for price movement
-        volatility = 0.05 * (self.chart.data_manager.timeframe ** 0.5)
-        self.current_price += random.uniform(-volatility, volatility)
+        timeframe = self.chart.data_manager.timeframe
+        
+        # A full bar has (timeframe * 4) ticks at 250ms interval.
+        # To match the total variance of a historical bar, divide by sqrt(ticks_per_bar)
+        ticks_per_bar = timeframe * 4
+        bar_volatility = 0.05 * (timeframe ** 0.5)
+        tick_volatility = bar_volatility / (ticks_per_bar ** 0.5) 
+        
+        self.current_price += random.uniform(-tick_volatility, tick_volatility)
 
         # Simulate a realistic Bid/Ask spread
         spread = random.uniform(0.01, 0.05)
